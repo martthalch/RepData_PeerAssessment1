@@ -1,58 +1,48 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-author: "marttha.lch"
-date: "Tuesday, May 12, 2015"
-output: html_document
----
-The first step is to load the libraries
-```{r}
 library(lubridate)
 library(plyr)
 library(dplyr)
 library(ggplot2)
-```
-## Loading and preprocessing the data
 
-```{r}
 #read data
 data<- read.csv("activity.csv", header=TRUE, sep=",", na.strings="NA")
 data$date<-ymd(data$date)
 #Filter out NAs
 dataClean<- subset(data, steps!= "NA") 
-```
 
-## What is mean total number of steps taken per day?
-```{r}
-#We create an aggregate functions that sums up all the steps by date and then we rename the columns accordingly.Based on the data created we build a Histogram.
+##1 What is mean total number of steps taken per day?
+#Aggregate by day
 byDay<-aggregate(dataClean$steps, by=list(Date=dataClean$date), FUN= sum)
+#a
 byDay<-setNames(byDay, c("Date", "TotalSteps"))
+
+#b Histogram
 hist(byDay$TotalSteps, breaks=25,
      main="Histogram of Number of Steps by Date",
      xlab="Number of Steps",
      ylab= "Frequency",
      border="white",
      col="blue")
-#The total mean of steps taken by day is:
+
+#c Calculate mean and median
 mean(byDay$TotalSteps)
 median(byDay$TotalSteps)
-```
 
-## What is the average daily activity pattern?
-We create an aggregate functions that calculates the mean of steps by interval and then we rename the columns accordingly.Based on the data created we build a Plot.At the end we calculate which average has been the highest. 
-```{r}
+##2 What is the average daily activity pattern?
+#Aggregate by interval
 byInterval<-aggregate(dataClean$steps, 
                       by=list(interval=dataClean$interval), FUN= mean)
 byInterval<-setNames(byInterval, c("interval", "IntervalMean"))
+
+#Plot graph
 plot(byInterval,type="l", main="Steps by Interval", xlab="Interval", ylab="Steps")
+
 #get Max from intervals
 byInterval[which.max(byInterval$IntervalMean),]
-```
 
-## Imputing missing values
-There is a difference between the values in this calculation vs. the values we did see in the first section. The mean and median are identical and we see more remarkable peaks in the data, specially for 10k steps. 
-```{r}
+##3 Imputing missing values
 #Number of NAs in the original DB
 sum(is.na(data$steps))
+
 ##Substitute NAs with Interval mean by first doing an inner join and then subtituting with the x column
 IntervalJoin<- inner_join(data, byInterval)
 IntervalJoin$steps[is.na(IntervalJoin$steps)]<-IntervalJoin[is.na(IntervalJoin$steps),4]
@@ -67,22 +57,18 @@ hist(byDayClean$TotalSteps, breaks=25,
      ylab= "Frequency",
      border="white",
      col="orange")
-
 #Calculate and report the mean and median total number of steps taken per day
-
 mean(byDayClean$TotalSteps)
 median(byDayClean$TotalSteps)
-```
 
-## Are there differences in activity patterns between weekdays and weekends?
-Yes. During the weekdays we see a lower amount of steps taken during most of the day with the exception of the intervals between 800 and 1000. For the weekends we don't see such a peak between 800 to 1000, but we do see that the amount of steps taken through out the day is higher. 
-```{r}
+##4 Are there differences in activity patterns between weekdays and weekends?
 x<-IntervalJoin
 x$Weekday<-weekdays(x$date)
 x$Weekday.type <- ifelse(x$Weekday == "Saturday" | x$Weekday == "Sunday", "Weekend", "Weekday")
+
+#Plot
 xAggr<- aggregate(x$steps, by=list(Weekday.type=x$Weekday.type, interval=x$interval), FUN=mean)
 xAggr<-setNames(xAggr, c("Weekday.type","interval","StepsMean"))
-ggplot(xAggr, aes(x=interval,y=StepsMean, group=Weekday.type)) + geom_line(colour="blue", size=0.6) + facet_grid(Weekday.type~.) + 
+p<- ggplot(xAggr, aes(x=interval,y=StepsMean, group=Weekday.type))
+p +geom_line(colour="blue", size=0.6) + facet_grid(Weekday.type~.) + 
   labs(title="Average steps by Weekend vs Weekday", x="Interval", y="Number of Steps")
-```
-
